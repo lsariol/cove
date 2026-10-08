@@ -2,6 +2,23 @@
 
 All notable changes to Cove. Versions follow [semantic versioning](https://semver.org); the HTTP API is `/v0` and stays backwards compatible.
 
+## Unreleased
+
+### Changed
+- **The version comes from Lighthouse:** `COVE_VERSION=${LIGHTHOUSE_DEPLOY_VERSION:-dev}` in the compose file, so a release no longer needs the version written in by hand.
+- The GitHub Actions workflow is removed; the checks run locally before a push (DOCUMENTATION.md §16).
+- Documentation: the key naming standard is `PROJECT_PLATFORM_ROLE_TYPE`, and database keys are connection strings only.
+
+## v1.0.2
+
+A maintenance release: no API, database or setting changes.
+
+### Changed
+- `COVE_VERSION` in `docker-compose.yml` is `v1.0.2`, so `status` and `version` report the running version again (v1.0.1 still reported v1.0.0).
+- Explanatory comments moved out of `docker-compose.yml`; DOCUMENTATION.md covers them.
+- Code comments trimmed to the ones that explain why.
+- DOCUMENTATION.md: the release steps say Cove deploys when a version is tagged, not on a push to `main`.
+
 ## v1.0.1
 
 A deployment-only release: no code, API, database or setting changes. Cove is now deployed by Lighthouse v1.0.0 as infrastructure, from release tags only.

@@ -22,7 +22,7 @@ environment:
   - TMDB_API_KEY=${SHARED_TMDB_API_KEY}
 ```
 
-and the project reads plain environment variables. Only a project that changes secrets itself gets its own token and uses CoveClient. Keys are named **`PROJECT_PLATFORM_TYPE`**, e.g. `BOTSUITE_TWITCH_CLIENT_ID`. Details: [DOCUMENTATION.md §9](DOCUMENTATION.md#9-connecting-a-project-the-standard).
+and the project reads plain environment variables. Only a project that changes secrets itself gets its own token and uses CoveClient. Keys are named **`PROJECT_PLATFORM_ROLE_TYPE`**, with ROLE left out when there's only one, e.g. `MARQUEE_TWITCH_CLIENT_ID`, `MARQUEE_DATABASE_MIGRATOR_URL`. Details: [DOCUMENTATION.md §9](DOCUMENTATION.md#9-connecting-a-project-the-standard).
 
 ---
 
@@ -74,4 +74,4 @@ status / help / help setup                 health, commands, step-by-step guide
 go vet ./... && go test ./...
 ```
 
-Integration tests run against a disposable Postgres when `COVE_TEST_DATABASE_URL` and `COVE_TEST_MIGRATE_URL` are set; CI runs everything on each push. See [DOCUMENTATION.md §16](DOCUMENTATION.md#16-development).
+Integration tests run against a disposable Postgres when `COVE_TEST_DATABASE_URL` and `COVE_TEST_MIGRATE_URL` are set. See [DOCUMENTATION.md §16](DOCUMENTATION.md#16-development).

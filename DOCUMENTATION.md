@@ -73,7 +73,7 @@ Everyday tasks, all in the Cove CLI (`docker exec -it cove /cove shell`, or `ali
 | Health check | `status` |
 | Help | `help`, `help <command>`, `help setup`, `help patterns` |
 
-Naming: keys are `PROJECT_PLATFORM_TYPE`, e.g. `BOTSUITE_TWITCH_CLIENT_ID` ([§9](#key-naming-standard)).
+Naming: keys are `PROJECT_PLATFORM_ROLE_TYPE`, ROLE left out when there's only one, e.g. `MARQUEE_TWITCH_CLIENT_ID` ([§9](#key-naming-standard)).
 
 ---
 
@@ -165,7 +165,7 @@ Settings are environment variables, read once from the `.env` file. Values alrea
 | `COVE_MIGRATE_DATABASE_URL` | Recommended | Connection string for the migrator role (`cove_migrator`). When set, Cove applies pending migrations on startup. `cove migrate` and `cove rotate-key` need it. |
 | `VAULT_ENCRYPTION_KEY` | Yes* | The vault key ([§6](#6-encryption-and-the-vault-key)). Under 24 characters only warns. *Generated (45 characters) if empty and the file is writable. **Never just edit it:** use `cove rotate-key`. |
 | `VAULT_NEW_ENCRYPTION_KEY` | No | Only while rotating the vault key ([§14](#rotating-the-vault-key)); delete it afterwards. |
-| `COVE_VERSION` | No | The version Cove reports in `status`, `cove version` and its first log line. Set in `docker-compose.yml`. Without it: `dev`, plus the git commit for a local build. |
+| `COVE_VERSION` | No | The version Cove reports in `status`, `cove version` and its first log line. The compose file sets it to `${LIGHTHOUSE_DEPLOY_VERSION:-dev}`, the release Lighthouse is deploying. Without it: `dev`, plus the git commit for a local build. |
 | `APP_PORT` | **Yes** | Port the API listens on (`2100` in Docker, `2110` for local dev). |
 | `APP_ENV` | No | `DEV` or `PROD`, shown in the CLI prompt (`cove (prod)>` in red). |
 | `APP_ENV_PATH` | No | The `.env` file to load first, and where generated secrets are saved. Default: the file that was loaded. |
@@ -436,13 +436,13 @@ The project uses CoveClient: `coveclient.New(os.Getenv("COVE_URL"), os.Getenv("C
 
 ### Key naming standard
 
-Every key is **`PROJECT_PLATFORM_TYPE`**, with an optional `ROLE` before the type (`PROJECT_PLATFORM_ROLE_TYPE`): capitals, digits and `_` only.
+Every key is **`PROJECT_PLATFORM_ROLE_TYPE`**, with `ROLE` left out when there's only one credential for the platform: capitals, digits and `_` only.
 
 | Part | Meaning | Examples |
 |---|---|---|
-| `PROJECT` | the owner; `SHARED` for keys several projects use | `BOTSUITE`, `MARQUEE`, `LIGHTHOUSE`, `PLOP`, `SHARED`, and `SPARK` for the server's own infrastructure (sparkdb's superuser, the Cloudflare tunnel) |
+| `PROJECT` | the owner: its compose project's `name:`, in capitals. `SHARED` for keys several projects use; `SPARK` only for server keys no compose file reads | `MARQUEE`, `LIGHTHOUSE`, `PLOP`, `SPARKDB`, `CLOUDFLARED`, `SHARED` |
 | `PLATFORM` | the service | `TWITCH`, `NETFLIX`, `TMDB`, `GITHUB`, `DISCORD`, `OPENAI`, `CLOUDFLARE`, `DATABASE`, `COVE` |
-| `ROLE` (optional) | which of several credentials for the same platform | `APP`, `MIGRATOR`, `READER`, `OWNER`, `ADMIN` for database roles; `BOT`, `OWNER` for accounts |
+| `ROLE` (left out when there's only one) | which of several credentials for the same platform | `MIGRATOR`, `READER` for database roles; `BOT`, `OWNER` for accounts; `TUNNEL` |
 | `TYPE` | the kind of value, from this list | see below |
 
 | `TYPE` | For | Example |
@@ -456,7 +456,7 @@ Every key is **`PROJECT_PLATFORM_TYPE`**, with an optional `ROLE` before the typ
 | `SECRET` | random values a project uses itself | `MARQUEE_SESSION_SECRET` |
 | `ID` | an identifier that isn't secret but belongs with the rest (e.g. a user ID) | `BOTSUITE_TWITCH_BOT_ID`, `MARQUEE_TWITCH_OWNER_ID` |
 
-Database examples: `BOTSUITE_DATABASE_URL` (the app's connection string), `BOTSUITE_DATABASE_APP_PASSWORD`, `BOTSUITE_DATABASE_READER_PASSWORD`, `MARQUEE_DATABASE_MIGRATOR_URL`, `SPARK_DATABASE_ADMIN_PASSWORD`.
+Databases: one connection string per role that logs in, and no separate password keys: `<P>_DATABASE_URL` (the app), `<P>_DATABASE_MIGRATOR_URL`, `<P>_DATABASE_READER_URL`, e.g. `MARQUEE_DATABASE_MIGRATOR_URL`.
 
 Why: `${...}` names must be letters, digits and `_` (Compose rejects `.` and `-`); the `PROJECT_` prefix gives each token one pattern (`BOTSUITE_*`; the `_` stops `BOT_*` matching `BOTSUITE_...`); and `list BOTSUITE_` / `search TWITCH` find things at a glance. The CLI warns on `create`, `generate` or `rename` of a non-standard name. `COVE_URL` isn't a secret: write it in the compose file.
 
@@ -543,7 +543,7 @@ The first start generates the vault key into `.env` and records it. Nothing can 
 
 ## 13. Deploying with Docker
 
-**Image** (`Dockerfile`): Go 1.27.1 builds a static binary into `alpine:3.24`; it runs `/cove serve` as user `10001`. The version Cove reports comes from `COVE_VERSION` in the compose file's `environment:`, written out as a plain value (a `${...}` placeholder there would make Lighthouse try to fetch it from Cove as a secret). `.dockerignore` keeps `.env`, `markers/` and `.git` out of the build.
+**Image** (`Dockerfile`): Go 1.27.1 builds a static binary into `alpine:3.24`; it runs `/cove serve` as user `10001`. The version Cove reports comes from `COVE_VERSION=${LIGHTHOUSE_DEPLOY_VERSION:-dev}` in the compose file: Lighthouse supplies the release it deploys, and a placeholder with a default is a setting, never fetched from Cove. `.dockerignore` keeps `.env`, `markers/` and `.git` out of the build.
 
 **Compose** (`docker-compose.yml`):
 
@@ -661,15 +661,15 @@ go vet ./... && go test ./...
   COVE_TEST_DATABASE_URL=postgres://cove_app:...@localhost:5499/cove_db
   ```
   Create the roles and database as in [§5](#roles) first.
-- **CI** (`.github/workflows/ci.yml`) on every push and pull request: gofmt, `go vet`, `go test -race` with a Postgres 16 service (integration tests included), and a build.
+- **Before pushing:** `gofmt -l .`, `go vet ./...` and `go test -race ./...`, with the integration tests against a disposable Postgres.
 - The `/v0` API contract (paths, status codes, JSON fields) is pinned by `internal/server` tests; CoveClient depends on it.
-- **The Go version is pinned in two places, kept equal:** `go 1.27.1` in `go.mod` (the minimum for any build; CI uses it too) and `golang:1.27.1-alpine` in the `Dockerfile` (what prod runs). When Go releases a patch (e.g. 1.27.2, with security fixes), bump both in one commit.
+- **The Go version is pinned in two places, kept equal:** `go 1.27.1` in `go.mod` (the minimum for any build) and `golang:1.27.1-alpine` in the `Dockerfile` (what prod runs). When Go releases a patch (e.g. 1.27.2, with security fixes), bump both in one commit.
 - Keep dependencies patched: `govulncheck ./...` (via `go run golang.org/x/vuln/cmd/govulncheck@latest`) should report nothing.
 
 ### Releasing
 
 1. Work lands on a branch, then `release/<version>`, and prod is updated only from `main`.
-2. Update `CHANGELOG.md` and set `COVE_VERSION` in `docker-compose.yml` to the new version; merge to `main`; tag `vX.Y.Z` in Cove (and CoveClient if it changed); push the tags.
+2. Update `CHANGELOG.md`; merge to `main`; tag `vX.Y.Z` in Cove (and CoveClient if it changed); push the tags. Lighthouse passes the tag in as `COVE_VERSION`.
 3. Lighthouse deploys Cove when a version is tagged (`x-lighthouse: deploy: releases` in `docker-compose.yml`); pushing `main` alone deploys nothing. By hand, on the server: `git pull && docker compose up -d --build`.
 
 Versions follow [semantic versioning](https://semver.org). The HTTP API stays `/v0` as long as it's backwards compatible.
