@@ -10,8 +10,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      - COVE_VERSION=v1.0.2   # shown by `status` and in the log; bump it with each release
-      - APP_ENV=PROD
+      - COVE_VERSION=${LIGHTHOUSE_DEPLOY_VERSION:-dev}
       - APP_PORT=2100
       - APP_ENV_PATH=/app/vault/.env
       - APP_MARKER_PATH=/app/vault/markers
