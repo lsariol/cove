@@ -2,7 +2,7 @@
 
 All notable changes to Cove. Versions follow [semantic versioning](https://semver.org); the HTTP API is `/v0` and stays backwards compatible.
 
-## v1.0.3 (unreleased)
+## v1.0.3 (2026-10-20)
 
 A maintenance release: no API, database or setting changes.
 
