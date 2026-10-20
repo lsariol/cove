@@ -2,14 +2,18 @@
 
 All notable changes to Cove. Versions follow [semantic versioning](https://semver.org); the HTTP API is `/v0` and stays backwards compatible.
 
-## Unreleased
+## v1.0.3 (unreleased)
+
+A maintenance release: no API, database or setting changes.
 
 ### Changed
 - **The version comes from Lighthouse:** `COVE_VERSION=${LIGHTHOUSE_DEPLOY_VERSION:-dev}` in the compose file, so a release no longer needs the version written in by hand.
-- The GitHub Actions workflow is removed; the checks run locally before a push (DOCUMENTATION.md §16).
+- **Tests run in the Dockerfile's `test` stage** instead of GitHub Actions: Lighthouse runs gofmt, vet and the tests with `-race` before deploying Cove, and a failure stops the deploy. The integration tests against Postgres run locally (DOCUMENTATION.md §16).
+- `.gitattributes` keeps Go, SQL and shell files LF on Windows, so `gofmt` agrees locally and in Docker.
 - Documentation: the key naming standard is `PROJECT_PLATFORM_ROLE_TYPE`, and database keys are connection strings only.
+- CHANGELOG version headings are dated: GitHub Releases, which Lighthouse now publishes, carry the date.
 
-## v1.0.2
+## v1.0.2 (2026-10-07)
 
 A maintenance release: no API, database or setting changes.
 
@@ -19,7 +23,7 @@ A maintenance release: no API, database or setting changes.
 - Code comments trimmed to the ones that explain why.
 - DOCUMENTATION.md: the release steps say Cove deploys when a version is tagged, not on a push to `main`.
 
-## v1.0.1
+## v1.0.1 (2026-10-07)
 
 A deployment-only release: no code, API, database or setting changes. Cove is now deployed by Lighthouse v1.0.0 as infrastructure, from release tags only.
 
@@ -32,7 +36,7 @@ A deployment-only release: no code, API, database or setting changes. Cove is no
 - Nothing to do: the image, the `.env`, the database and every client are unchanged.
 - `status` and `version` still report `v1.0.0`: `COVE_VERSION` in the compose file wasn't bumped for this release.
 
-## v1.0.0
+## v1.0.0 (2026-10-02)
 
 The first stable release: a rework of v0.2.0 for security, reliability and day-to-day use. The `/v0` routes and responses are unchanged, but **every client now needs its own token, and deploying it needs the upgrade steps below**. Use CoveClient v1.0.0.
 
@@ -80,6 +84,6 @@ The first stable release: a rework of v0.2.0 for security, reliability and day-t
 - `restore` finds a secret's values from before a rename.
 - Many clearer error and startup messages.
 
-## v0.2.0
+## v0.2.0 (2026-05-19)
 
 The version in production before v1.0.0: the `/v0` API with a JSON envelope and a single shared token.

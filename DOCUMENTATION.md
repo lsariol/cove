@@ -661,7 +661,8 @@ go vet ./... && go test ./...
   COVE_TEST_DATABASE_URL=postgres://cove_app:...@localhost:5499/cove_db
   ```
   Create the roles and database as in [§5](#roles) first.
-- **Before pushing:** `gofmt -l .`, `go vet ./...` and `go test -race ./...`, with the integration tests against a disposable Postgres.
+- **The Dockerfile's `test` stage** runs `gofmt -l .`, `go vet ./...` and `go test -race ./...` (integration tests skipped: no Postgres in a build). Lighthouse builds it before every deploy of Cove, and a failure stops the deploy. `docker build --target test .` runs it locally.
+- **Before pushing:** the same, plus the integration tests against a disposable Postgres, and `govulncheck` (below).
 - The `/v0` API contract (paths, status codes, JSON fields) is pinned by `internal/server` tests; CoveClient depends on it.
 - **The Go version is pinned in two places, kept equal:** `go 1.27.1` in `go.mod` (the minimum for any build) and `golang:1.27.1-alpine` in the `Dockerfile` (what prod runs). When Go releases a patch (e.g. 1.27.2, with security fixes), bump both in one commit.
 - Keep dependencies patched: `govulncheck ./...` (via `go run golang.org/x/vuln/cmd/govulncheck@latest`) should report nothing.
@@ -669,8 +670,8 @@ go vet ./... && go test ./...
 ### Releasing
 
 1. Work lands on a branch, then `release/<version>`, and prod is updated only from `main`.
-2. Update `CHANGELOG.md`; merge to `main`; tag `vX.Y.Z` in Cove (and CoveClient if it changed); push the tags. Lighthouse passes the tag in as `COVE_VERSION`.
-3. Lighthouse deploys Cove when a version is tagged (`x-lighthouse: deploy: releases` in `docker-compose.yml`); pushing `main` alone deploys nothing. By hand, on the server: `git pull && docker compose up -d --build`.
+2. Update `CHANGELOG.md`, its version heading dated: `## vX.Y.Z (YYYY-MM-DD)`. Merge to `main` (fast-forward) and push `main`; then tag `vX.Y.Z` in Cove (and CoveClient if it changed) and push the tags. Pushing `main` deploys nothing; the tag does.
+3. Lighthouse deploys the tag (`x-lighthouse: deploy: releases` in `docker-compose.yml`), passes it in as `COVE_VERSION`, and once Cove is verified healthy publishes its GitHub Release with that CHANGELOG section. Don't create Releases by hand. By hand, on the server, if Lighthouse can't: `git pull && docker compose up -d --build`.
 
 Versions follow [semantic versioning](https://semver.org). The HTTP API stays `/v0` as long as it's backwards compatible.
 
